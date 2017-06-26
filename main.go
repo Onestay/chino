@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"strings"
 )
 
 var token string
@@ -30,6 +29,7 @@ func main() {
 	}
 
 	dg.AddHandler(messageCreate)
+	dg.AddHandler(guildCreate)
 
 	err = dg.Open()
 	if err != nil {
@@ -38,7 +38,7 @@ func main() {
 
 	defer dg.Close()
 
-	cmdHandler = framework.NewCommandHandler()
+	cmdHandler = framework.NewCommandHandlerWithDB("chino", "guilds")
 	registerCommands()
 
 	fmt.Println("Bot running. Press CTRL+C to exit.")
@@ -49,19 +49,24 @@ func main() {
 }
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if string(m.Content[0:len(prefix)]) != prefix {
-		return
-	}
+	//if len(m.Content) > len(prefix) && string(m.Content[0:len(prefix)]) != prefix {
+	//	return
+	//}
+	//
+	//if s.State.User.ID == m.Author.ID {
+	//	return
+	//}
+	//command := strings.Split(m.Content, " ")[0]
+	//command = strings.TrimLeft(command, prefix)
 
-	if s.State.User.ID == m.Author.ID {
-		return
-	}
-	command := strings.Split(m.Content, " ")[0]
-	command = strings.TrimLeft(command, prefix)
+	go cmdHandler.OnMessage(m.Content, s, m)
+}
 
-	cmdHandler.ExecuteCommand(command, s, m)
+func guildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
+	go cmdHandler.MS.CreateGuildConfig(g.ID)
 }
 
 func registerCommands() {
-	cmdHandler.AddCommand(commands.Ping)
+	go cmdHandler.AddCommand(commands.Ping)
+	go cmdHandler.AddCommand(commands.Pong)
 }
